@@ -1,13 +1,10 @@
-import psycopg2, random, time
+import random
+import time
 from datetime import datetime
 
-conn = psycopg2.connect(
-    dbname="topic6_demo",
-    user="postgres",
-    password="root",
-    host="localhost",
-    port=5432
-)
+from db import get_conn
+
+conn = get_conn()
 cur = conn.cursor()
 print("Simulator running... Press Ctrl+C to stop")
 

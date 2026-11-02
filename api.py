@@ -1,18 +1,15 @@
 from fastapi import FastAPI
-import psycopg2
 import psycopg2.extras
+
+from db import get_conn
 
 app = FastAPI()
 
-def get_conn():
-    return psycopg2.connect(
-        dbname="topic6_demo", user="postgres",
-        password="root", host="localhost", port=5432
-    )
 
 @app.get("/")
 def root():
-    return {"message": "Topic 6 - Real-Time Sensor API is running!"}
+    return {"message": "IoT Sensor Anomaly API is running!"}
+
 
 @app.get("/data")
 def get_data():
@@ -23,6 +20,7 @@ def get_data():
     conn.close()
     return {"total": len(rows), "data": [dict(r) for r in rows]}
 
+
 @app.get("/anomalies")
 def get_anomalies():
     conn = get_conn()
@@ -31,6 +29,7 @@ def get_anomalies():
     rows = cur.fetchall()
     conn.close()
     return {"total_anomalies": len(rows), "anomalies": [dict(r) for r in rows]}
+
 
 @app.get("/cleaned")
 def get_cleaned():

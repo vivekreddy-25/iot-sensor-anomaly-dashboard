@@ -1,17 +1,13 @@
-import streamlit as st
-import psycopg2
 import pandas as pd
+import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="Topic 6 — Live Dashboard", layout="wide")
-st.title("🌡️ Real-Time Sensor Dashboard")
+from db import get_conn
 
-def get_conn():
-    return psycopg2.connect(
-        dbname="topic6_demo", user="postgres",
-        password="root", host="localhost", port=5432
-    )
+st.set_page_config(page_title="IoT Sensor Anomaly Dashboard", layout="wide")
+st.title("IoT Sensor Anomaly Dashboard")
 
-# Auto-refresh every 3 seconds
+st_autorefresh(interval=3000, key="r")
 st.markdown("Auto-refreshing every 3 seconds...")
 
 conn = get_conn()
@@ -19,9 +15,11 @@ conn = get_conn()
 col1, col2, col3 = st.columns(3)
 df = pd.read_sql("SELECT * FROM sensor_data ORDER BY ts DESC LIMIT 100", conn)
 df_anom = pd.read_sql("SELECT * FROM anomaly_log ORDER BY detected_at DESC LIMIT 20", conn)
+total = pd.read_sql("SELECT COUNT(*) AS n FROM sensor_data", conn)["n"][0]
+n_anom = pd.read_sql("SELECT COUNT(*) AS n FROM anomaly_log", conn)["n"][0]
 
-col1.metric("Total Readings", len(df))
-col2.metric("Anomalies Detected", len(df_anom))
+col1.metric("Total Readings", total)
+col2.metric("Anomalies Detected", n_anom)
 col3.metric("Latest Temp (°C)", f"{df['temperature'].iloc[0]:.2f}" if not df.empty else "—")
 
 st.subheader("📈 Live Temperature Chart")

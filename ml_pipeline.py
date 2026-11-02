@@ -1,18 +1,16 @@
-import psycopg2, time
-import pandas as pd
-import numpy as np
+import time
 from datetime import datetime
 
-conn = psycopg2.connect(
-    dbname="topic6_demo",
-    user="postgres",
-    password="root",
-    host="localhost",
-    port=5432
-)
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+
+from db import get_conn
+
+conn = get_conn()
 
 print("ML Pipeline running... Press Ctrl+C to stop")
 last_id = 0
+model = None
 
 while True:
     cur = conn.cursor()
@@ -25,15 +23,26 @@ while True:
     if rows:
         df = pd.DataFrame(rows, columns=["id", "temperature", "pressure"])
         df = df.dropna()
+        if model is None and len(df) < 2:
+            cur.close()
+            time.sleep(4)
+            continue
+
         for col in ["temperature", "pressure"]:
             mean, std = df[col].mean(), df[col].std()
             std = std if std > 0 else 1
             df[f"{col}_zscore"] = (df[col] - mean) / std
 
+        features = df[["temperature", "pressure"]]
+        if model is None:
+            model = IsolationForest(contamination=0.12, random_state=42)
+            model.fit(features)
+        df["is_anomaly_ml"] = model.predict(features) == -1
+
         for _, row in df.iterrows():
             reasons = []
-            if abs(row["temperature_zscore"]) > 2.5:
-                reasons.append(f"temp z={row['temperature_zscore']:.2f}")
+            if row["is_anomaly_ml"]:
+                reasons.append("IsolationForest flagged reading")
             if row["temperature"] > 50:
                 reasons.append(f"temp {row['temperature']}°C > 50°C")
             if row["pressure"] < 20:
